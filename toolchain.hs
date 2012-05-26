@@ -10,6 +10,11 @@ import System (getArgs)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Process (system)
 
+{- TODO
+run unit tests
+run functional tests
+-}
+
 
 main = do
    args <- getArgs
@@ -30,6 +35,7 @@ showUsage = do
    putStrLn "Usage: toolchain <ghc_opt> <main_hs> <unittest_hs> <functest_hs> <svc_cmd>"
    putStrLn ""
    putStrLn "   ghc_opt\tThe GHC compile options to apply"
+   putStrLn "\tDefault is '-O2 -threaded' if this is an empty string"
    putStrLn "   main_hs\tThe main .hs project file"
    putStrLn "   unittest_hs\tThe entry point .hs file for running unit tests/QuickCheck"
    putStrLn "   functest_hs\tThe entry point .hs file for running functional tests"
@@ -45,7 +51,10 @@ runToolChain args = do
 
 compileCodeModules :: [String] -> MaybeT IO ()
 compileCodeModules (options:main:unitTests:funcTests:[]) = do
-   let f = compileModule options
+   opts <- if options == []
+      then return ("-O2 -threaded")
+      else return options
+   let f = compileModule opts
    f main
    f unitTests
    f funcTests
@@ -73,12 +82,3 @@ execProc cmd = do
    e <- liftIO $ system cmd
    guard (e == ExitSuccess)
    return ()
-
-{-
-compile code
-compile unit tests
-compile functional tests
-run unit tests
-run functional tests
-push source control changes
--}
