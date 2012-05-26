@@ -22,7 +22,7 @@ main = do
       r <- runMaybeT $ runGitSVC args
       endTime <- getCurrentTime
       putStrLn ""
-      putStrLn $ "SVCGit took " ++ (show $ diffUTCTime endTime startTime)
+      putStrLn $ "GitSVC took " ++ (show $ diffUTCTime endTime startTime)
       case r of
          Just _ -> putStrLn "GitSVC SUCCEEDED"
          _      -> putStrLn "GitSVC FAILED"
