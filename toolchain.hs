@@ -8,12 +8,8 @@ import Control.Monad.Trans (liftIO)
 import Data.Time
 import System (getArgs)
 import System.Exit (ExitCode (ExitSuccess))
+import System.Info (os)
 import System.Process (system)
-
-{- TODO
-run unit tests
-run functional tests
--}
 
 
 main = do
@@ -98,4 +94,7 @@ execProc cmd = do
    return ()
 
 
-parseExe path = (++ "exe") $ take (length path - 2) path
+parseExe path = (++ suffix) $ reverse $ drop 1 $ dropWhile (/= '.') $ reverse path
+   where suffix = if (take 5 os) == "mingw"
+           then ".exe"  -- EXE extention for Windows (which shows up as mingw)
+           else ""      -- Linux doesn't need an extension
