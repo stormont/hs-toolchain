@@ -19,12 +19,13 @@ data Flag = Usage
           | CompileFT String
           | RunUT String
           | RunFT String
-          | RunSVC
+          | RunSVC String
           deriving (Show, Eq)
 
 
 data Options = Options
-   { optFlags :: [Flag]
+   { optFlags   :: [Flag]
+   , optCompile :: String
    } deriving (Show)
 
 
@@ -40,7 +41,7 @@ main = do
       return ()
      else do
       startTime <- getCurrentTime
-      r <- runMaybeT $ dispatchOpts $ optFlags opts
+      r <- runMaybeT $ dispatchOpts (optCompile opts) (optFlags opts)
       endTime <- getCurrentTime
       putStrLn $ "Toolchain took " ++ (show $ diffUTCTime endTime startTime)
       case r of
@@ -50,35 +51,26 @@ main = do
 
 options :: [OptDescr (Options -> IO Options)]
 options =
-   [ Option ['?'] ["help"]            (NoArg addUsage)             "Show usage/help"
-   , Option ['c'] ["compile"]         (ReqArg addCompile "file")   "Project entry file to compile"
-   , Option ['u'] ["compileunittest"] (ReqArg addCompileUT "file") "Unit test entry file to compile"
-   , Option ['f'] ["compilefunctest"] (ReqArg addCompileFT "file") "Functional test entry file to compile"
-   , Option ['U'] ["rununittest"]     (ReqArg addRunUT "cmd")      "Unit test entry command to run"
-   , Option ['F'] ["runfunctest"]     (ReqArg addRunFT "cmd")      "Functional test entry command to run"
-   , Option []    ["svc"]             (NoArg addRunSVC)            "Run SVC command"
+   [ Option ['?'] ["help"]            (NoArg addUsage)                     "Show usage/help"
+   , Option ['o'] ["options"]         (ReqArg addCompileOptions "options") "Options to use when compiling"
+   , Option ['c'] ["compile"]         (ReqArg addCompile "file")           "Project entry file to compile"
+   , Option ['u'] ["compileunittest"] (ReqArg addCompileUT "file")         "Unit test entry file to compile"
+   , Option ['f'] ["compilefunctest"] (ReqArg addCompileFT "file")         "Functional test entry file to compile"
+   , Option ['U'] ["rununittest"]     (ReqArg addRunUT "cmd")              "Unit test entry command to run"
+   , Option ['F'] ["runfunctest"]     (ReqArg addRunFT "cmd")              "Functional test entry command to run"
+   , Option []    ["svc"]             (ReqArg addRunSVC "cmd")             "Run SVC command"
    ]
 
 
-defaultOptions = Options { optFlags = [] }
+defaultOptions = Options { optFlags = [], optCompile = "-O2 -threaded" }
 addUsage opt = return opt { optFlags = (Usage : optFlags opt) }
+addCompileOptions o opt = return opt { optCompile = o }
 addCompile f opt = return opt { optFlags = ((Compile f) : optFlags opt) }
 addCompileUT f opt = return opt { optFlags = ((CompileUT f) : optFlags opt) }
 addCompileFT f opt = return opt { optFlags = ((CompileFT f) : optFlags opt) }
 addRunUT c opt = return opt { optFlags = ((RunUT c) : optFlags opt) }
 addRunFT c opt = return opt { optFlags = ((RunFT c) : optFlags opt) }
-addRunSVC opt = return opt { optFlags = (RunSVC : optFlags opt) }
-
-
-dispatchOpts :: [Flag] -> MaybeT IO ()
-dispatchOpts []     = return ()
-dispatchOpts (x:xs) = do
-   case x of
-      Usage -> showUsage
-      _     -> do
-         liftIO $ putStrLn $ "TODO: " ++ (show x)
-         mzero
-   dispatchOpts xs
+addRunSVC c opt = return opt { optFlags = ((RunSVC c) : optFlags opt) }
 
 
 showUsage :: MaybeT IO ()
@@ -88,39 +80,26 @@ showUsage = do
    return ()
 
 
-runToolChain :: [String] -> MaybeT IO ()
-runToolChain args = do
-   compileCodeModules $ take 4 args
-   runTestModules $ take 2 $ drop 2 args
-   runSourceControl $ head $ drop 4 args
+dispatchOpts :: String -> [Flag] -> MaybeT IO ()
+dispatchOpts opts []        = return ()
+dispatchOpts opts (x:xs) = do
+   case x of
+      Usage       -> showUsage
+      Compile f   -> compileCodeModule opts f
+      CompileUT f -> compileCodeModule opts f
+      CompileFT f -> compileCodeModule opts f
+      RunUT c     -> execProc c
+      RunFT c     -> execProc c
+      RunSVC c    -> execProc c
+   dispatchOpts opts xs
 
 
-compileCodeModules :: [String] -> MaybeT IO ()
-compileCodeModules (options:main:unitTests:funcTests:[]) = do
+compileCodeModule :: String -> String -> MaybeT IO ()
+compileCodeModule options f = do
    opts <- if options == []
       then return ("-O2 -threaded")
       else return options
-   let f = compileModule opts
-   f main
-   f unitTests
-   f funcTests
-
-
-runTestModules :: [String] -> MaybeT IO ()
-runTestModules (unitTests:funcTests:[]) = do
-   if unitTests /= []
-     then execProc $ parseExe unitTests
-     else return ()
-   if funcTests /= []
-     then execProc $ parseExe funcTests
-     else return ()
-
-
-runSourceControl :: String -> MaybeT IO ()
-runSourceControl cmd = do
-   if cmd /= []
-     then execProc cmd
-     else return ()
+   compileModule opts f
 
 
 compileModule :: String -> FilePath -> MaybeT IO ()
