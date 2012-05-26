@@ -6,46 +6,53 @@ import Control.Monad (guard)
 import Control.Monad.Maybe (MaybeT(..), runMaybeT)
 import Control.Monad.Trans (liftIO)
 import Data.Time
-import System (getArgs)
 import System.Exit (ExitCode (ExitSuccess))
 import System.Process (system)
 
 
 main = do
-   args <- getArgs
-   if (length args) /= 3
-     then do
-      putStrLn $ "Args passed: " ++ show args
-      showUsage
-     else do
-      startTime <- getCurrentTime
-      r <- runMaybeT $ runGitSVC args
-      endTime <- getCurrentTime
-      putStrLn ""
-      putStrLn $ "GitSVC took " ++ (show $ diffUTCTime endTime startTime)
-      case r of
-         Just _ -> putStrLn "GitSVC SUCCEEDED"
-         _      -> putStrLn "GitSVC FAILED"
-
-showUsage = do
-   putStrLn "Usage: gitsvc <add_opts> <filematch> <comment>"
+   startTime <- getCurrentTime
+   r <- runMaybeT $ runGitSVC
+   endTime <- getCurrentTime
    putStrLn ""
-   putStrLn "   add_opts\tThe options to use with 'git add'"
-   putStrLn "\tDefault is '-v -A' if this is an empty string"
-   putStrLn "   filematch\tThe file pattern to match with 'git add'"
-   putStrLn "\tYou may encounter errors if you prefix this pattern with '*'"
-   putStrLn "   comment\tComment to apply to the commit"
-   putStrLn ""
+   putStrLn $ "GitSVC took " ++ (show $ diffUTCTime endTime startTime)
+   case r of
+      Just _ -> putStrLn "GitSVC SUCCEEDED"
+      _      -> putStrLn "GitSVC FAILED"
    
 
-runGitSVC :: [String] -> MaybeT IO ()
-runGitSVC (options:filematch:comment:[]) = do
+runGitSVC :: MaybeT IO ()
+runGitSVC = do
+   options <- liftIO $ getOptions
+   filematch <- liftIO $ getFilematch
    opts <- if options == []
       then return ("-v -A")
       else return options
-   execProc $ "git add " ++ opts ++ " *" ++ filematch
+   execProc $ "git add " ++ options ++ " *" ++ filematch
+   comment <- liftIO $ getComment
    execProc $ "git commit -m \"" ++ comment ++ "\""
-   execProc $ "git push -u origin master"
+   --execProc $ "git push -u origin master"
+
+
+getOptions :: IO (String)
+getOptions = do
+   putStr "Enter git add options to use [defaults to -v -A]: "
+   input <- getLine
+   if input == []
+     then return ("-v -A")
+     else return (input)
+
+
+getFilematch :: IO (String)
+getFilematch = do
+   putStr "Enter git add filematch to use: "
+   getLine
+
+
+getComment :: IO (String)
+getComment = do
+   putStr "Enter git commit comment to use: "
+   getLine
 
 
 execProc :: String -> MaybeT IO ()

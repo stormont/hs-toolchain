@@ -2,45 +2,90 @@
 module Main
    where
 
-import Control.Monad (guard)
+import Control.Monad (guard, mzero)
 import Control.Monad.Maybe (MaybeT(..), runMaybeT)
 import Control.Monad.Trans (liftIO)
 import Data.Time
 import System (getArgs)
+import System.Console.GetOpt
 import System.Exit (ExitCode (ExitSuccess))
 import System.Info (os)
 import System.Process (system)
 
 
+data Flag = Usage
+          | Compile String
+          | CompileUT String
+          | CompileFT String
+          | RunUT String
+          | RunFT String
+          | RunSVC
+          deriving (Show, Eq)
+
+
+data Options = Options
+   { optFlags :: [Flag]
+   } deriving (Show)
+
+
+main :: IO ()
 main = do
    args <- getArgs
-   if length args /= 5
+   let (actions, nonOpts, msgs) = getOpt RequireOrder options args
+   opts <- foldl (>>=) (return defaultOptions) actions
+   mapM_ putStrLn msgs
+   if (optFlags opts) == []
      then do
-      putStrLn $ "Args passed: " ++ show args
-      showUsage
+      runMaybeT $ showUsage
+      return ()
      else do
       startTime <- getCurrentTime
-      r <- runMaybeT $ runToolChain args
+      r <- runMaybeT $ dispatchOpts $ optFlags opts
       endTime <- getCurrentTime
-      putStrLn ""
       putStrLn $ "Toolchain took " ++ (show $ diffUTCTime endTime startTime)
       case r of
-         Just _ -> putStrLn "Toolchain SUCCEEDED"
-         _      -> putStrLn "Toolchain FAILED"
+         Nothing -> putStrLn "Toolchain FAILED"
+         _       -> putStrLn "Toolchain SUCCEEDED"
 
 
+options :: [OptDescr (Options -> IO Options)]
+options =
+   [ Option ['?'] ["help"]            (NoArg addUsage)             "Show usage/help"
+   , Option ['c'] ["compile"]         (ReqArg addCompile "file")   "Project entry file to compile"
+   , Option ['u'] ["compileunittest"] (ReqArg addCompileUT "file") "Unit test entry file to compile"
+   , Option ['f'] ["compilefunctest"] (ReqArg addCompileFT "file") "Functional test entry file to compile"
+   , Option ['U'] ["rununittest"]     (ReqArg addRunUT "cmd")      "Unit test entry command to run"
+   , Option ['F'] ["runfunctest"]     (ReqArg addRunFT "cmd")      "Functional test entry command to run"
+   , Option []    ["svc"]             (NoArg addRunSVC)            "Run SVC command"
+   ]
+
+
+defaultOptions = Options { optFlags = [] }
+addUsage opt = return opt { optFlags = (Usage : optFlags opt) }
+addCompile f opt = return opt { optFlags = ((Compile f) : optFlags opt) }
+addCompileUT f opt = return opt { optFlags = ((CompileUT f) : optFlags opt) }
+addCompileFT f opt = return opt { optFlags = ((CompileFT f) : optFlags opt) }
+addRunUT c opt = return opt { optFlags = ((RunUT c) : optFlags opt) }
+addRunFT c opt = return opt { optFlags = ((RunFT c) : optFlags opt) }
+addRunSVC opt = return opt { optFlags = (RunSVC : optFlags opt) }
+
+
+dispatchOpts :: [Flag] -> MaybeT IO ()
+dispatchOpts []     = return ()
+dispatchOpts (x:xs) = do
+   case x of
+      Usage -> showUsage
+      _     -> do
+         liftIO $ putStrLn $ "TODO: " ++ (show x)
+         mzero
+   dispatchOpts xs
+
+
+showUsage :: MaybeT IO ()
 showUsage = do
-   putStrLn "Usage: toolchain <ghc_opt> <main_hs> <unittest_hs> <functest_hs> <svc_cmd>"
-   putStrLn ""
-   putStrLn "   Setting any arg to an empty string will skip that step of the toolchain"
-   putStrLn ""
-   putStrLn "   ghc_opt\tThe GHC compile options to apply"
-   putStrLn "\tDefault is '-O2 -threaded' if this is an empty string"
-   putStrLn "   main_hs\tThe main .hs project file"
-   putStrLn "   unittest_hs\tThe entry point .hs file for running unit tests/QuickCheck"
-   putStrLn "   functest_hs\tThe entry point .hs file for running functional tests"
-   putStrLn "   svc_cmd\tThe command to execute for firing off source versioning control"
-   putStrLn ""
+   let header = "Usage: toolchain [OPTIONS...]"
+   liftIO $ putStrLn $ usageInfo header options
+   return ()
 
 
 runToolChain :: [String] -> MaybeT IO ()
