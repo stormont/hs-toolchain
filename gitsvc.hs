@@ -33,8 +33,10 @@ showUsage = do
    putStrLn "   add_opts\tThe options to use with 'git add'"
    putStrLn "\tDefault is '-v -A' if this is an empty string"
    putStrLn "   filematch\tThe file pattern to match with 'git add'"
+   putStrLn "\tYou may encounter errors if you prefix this pattern with '*'"
    putStrLn "   comment\tComment to apply to the commit"
-
+   putStrLn ""
+   
 
 runGitSVC :: [String] -> MaybeT IO ()
 runGitSVC (options:filematch:comment:[]) = do
