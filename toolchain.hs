@@ -54,7 +54,7 @@ options =
    , Option ['c'] ["compile"]         (ReqArg addCompile "file")           "Project entry file to compile"
    , Option ['U'] ["rununittest"]     (ReqArg addRunUT "cmd")              "Unit test entry command to run"
    , Option ['F'] ["runfunctest"]     (ReqArg addRunFT "cmd")              "Functional test entry command to run"
-   , Option []    ["vcs"]             (ReqArg addRunVCS "cmd")             "Run VCS command"
+   , Option ['v'] ["vcs"]             (ReqArg addRunVCS "cmd")             "Run VCS command"
    ]
 
 
