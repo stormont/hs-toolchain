@@ -33,7 +33,7 @@ main :: IO ()
 main = do
    args <- getArgs
    let (actions, nonOpts, msgs) = getOpt RequireOrder options args
-   opts <- foldl (>>=) (return defaultOptions) actions
+   opts <- foldl (>>=) (return defaultOptions) $ reverse actions
    mapM_ putStrLn msgs
    if (optFlags opts) == []
      then do
