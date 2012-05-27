@@ -5,6 +5,7 @@ module Main
 import Control.Monad (guard)
 import Control.Monad.Maybe (MaybeT(..), runMaybeT)
 import Control.Monad.Trans (liftIO)
+import Data.Text (pack, toLower)
 import Data.Time
 import System.Exit (ExitCode (ExitSuccess))
 import System.IO (hFlush, stdout)
@@ -25,6 +26,12 @@ main = do
 
 runGitVCS :: MaybeT IO ()
 runGitVCS = do
+   liftIO $ putStr "Run diff first? Default is no. [y|n]: "
+   liftIO $ hFlush stdout
+   diff <- liftIO $ getLine
+   if any (== (toLower $ pack diff)) (map pack ["y", "yes"])
+     then execProc "git diff"
+     else return ()
    liftIO $ putStr "Enter git add options to use [defaults to -v -A]: "
    liftIO $ hFlush stdout
    options <- liftIO $ getOptions
