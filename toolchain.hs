@@ -15,11 +15,9 @@ import System.Process (system)
 
 data Flag = Usage
           | Compile String
-          | CompileUT String
-          | CompileFT String
           | RunUT String
           | RunFT String
-          | RunSVC String
+          | RunVCS String
           deriving (Show, Eq)
 
 
@@ -54,11 +52,9 @@ options =
    [ Option ['?'] ["help"]            (NoArg addUsage)                     "Show usage/help"
    , Option ['o'] ["options"]         (ReqArg addCompileOptions "options") "Options to use when compiling"
    , Option ['c'] ["compile"]         (ReqArg addCompile "file")           "Project entry file to compile"
-   , Option ['u'] ["compileunittest"] (ReqArg addCompileUT "file")         "Unit test entry file to compile"
-   , Option ['f'] ["compilefunctest"] (ReqArg addCompileFT "file")         "Functional test entry file to compile"
    , Option ['U'] ["rununittest"]     (ReqArg addRunUT "cmd")              "Unit test entry command to run"
    , Option ['F'] ["runfunctest"]     (ReqArg addRunFT "cmd")              "Functional test entry command to run"
-   , Option []    ["svc"]             (ReqArg addRunSVC "cmd")             "Run SVC command"
+   , Option []    ["vcs"]             (ReqArg addRunVCS "cmd")             "Run VCS command"
    ]
 
 
@@ -66,11 +62,9 @@ defaultOptions = Options { optFlags = [], optCompile = "-O2 -threaded" }
 addUsage opt = return opt { optFlags = (Usage : optFlags opt) }
 addCompileOptions o opt = return opt { optCompile = o }
 addCompile f opt = return opt { optFlags = ((Compile f) : optFlags opt) }
-addCompileUT f opt = return opt { optFlags = ((CompileUT f) : optFlags opt) }
-addCompileFT f opt = return opt { optFlags = ((CompileFT f) : optFlags opt) }
 addRunUT c opt = return opt { optFlags = ((RunUT c) : optFlags opt) }
 addRunFT c opt = return opt { optFlags = ((RunFT c) : optFlags opt) }
-addRunSVC c opt = return opt { optFlags = ((RunSVC c) : optFlags opt) }
+addRunVCS c opt = return opt { optFlags = ((RunVCS c) : optFlags opt) }
 
 
 showUsage :: MaybeT IO ()
@@ -85,21 +79,11 @@ dispatchOpts opts []        = return ()
 dispatchOpts opts (x:xs) = do
    case x of
       Usage       -> showUsage
-      Compile f   -> compileCodeModule opts f
-      CompileUT f -> compileCodeModule opts f
-      CompileFT f -> compileCodeModule opts f
+      Compile f   -> compileModule opts f
       RunUT c     -> execProc c
       RunFT c     -> execProc c
-      RunSVC c    -> execProc c
+      RunVCS c    -> execProc c
    dispatchOpts opts xs
-
-
-compileCodeModule :: String -> String -> MaybeT IO ()
-compileCodeModule options f = do
-   opts <- if options == []
-      then return ("-O2 -threaded")
-      else return options
-   compileModule opts f
 
 
 compileModule :: String -> FilePath -> MaybeT IO ()
