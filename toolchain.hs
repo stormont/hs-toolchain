@@ -52,8 +52,8 @@ options =
    [ Option ['?'] ["help"]            (NoArg addUsage)                     "Show usage/help"
    , Option ['o'] ["options"]         (ReqArg addCompileOptions "options") "Options to use when compiling"
    , Option ['c'] ["compile"]         (ReqArg addCompile "file")           "Project entry file to compile"
-   , Option ['U'] ["rununittest"]     (ReqArg addRunUT "cmd")              "Unit test entry command to run"
-   , Option ['F'] ["runfunctest"]     (ReqArg addRunFT "cmd")              "Functional test entry command to run"
+   , Option ['u'] ["rununittest"]     (ReqArg addRunUT "cmd")              "Unit test entry command to run"
+   , Option ['f'] ["runfunctest"]     (ReqArg addRunFT "cmd")              "Functional test entry command to run"
    , Option ['v'] ["vcs"]             (ReqArg addRunVCS "cmd")             "Run VCS command"
    ]
 
